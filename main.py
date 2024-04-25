@@ -24,6 +24,11 @@ def init_db():
         ''')
         db.commit()
 
+def update_contact(contact_id, name, phone):
+    db = get_db()
+    db.execute('UPDATE contacts SET name = ?, phone = ? WHERE id = ?', (name, phone, contact_id))
+    db.commit()
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     message = ''  # Message indicating the result of the operation
@@ -35,6 +40,15 @@ def index():
             db.execute('DELETE FROM contacts WHERE id = ?', (contact_id,))
             db.commit()
             message = 'Contact deleted successfully.'
+        elif request.form.get('action') == 'edit':
+            contact_id = request.form.get('contact_id')
+            name = request.form.get('name')
+            phone = request.form.get('phone')
+            if name and phone:
+                update_contact(contact_id, name, phone)
+                message = 'Contact updated successfully.'
+            else:
+                message = 'Missing name or phone number.'
         else:
             name = request.form.get('name')
             phone = request.form.get('phone')
@@ -56,6 +70,31 @@ def index():
         <html>
         <head>
             <title>Contacts</title>
+            <style>
+                table {
+                    border-collapse: collapse;
+                    width: 50%;
+                }
+                th, td {
+                    border: 1px solid #dddddd;
+                    text-align: left;
+                    padding: 8px;
+                }
+                th {
+                    background-color: #f2f2f2;
+                }
+                input[type="submit"] {
+                    background-color: #4CAF50;
+                    color: white;
+                    padding: 8px 20px;
+                    border: none;
+                    cursor: pointer;
+                    border-radius: 4px;
+                }
+                input[type="submit"]:hover {
+                    background-color: #45a049;
+                }
+            </style>
         </head>
         <body>
             <h2>Add Contact</h2>
@@ -63,21 +102,36 @@ def index():
                 <label for="name">Name:</label><br>
                 <input type="text" id="name" name="name" required><br>
                 <label for="phone">Phone Number:</label><br>
-                <input type="text" id="phone" name="phone" required><br><br>
+                <input type="text" id="phone" name="phone" pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}" required title="Phone number must be in the format xxx-xxx-xxxx"><br><br>
                 <input type="submit" value="Submit">
             </form>
             <p>{{ message }}</p>
+            <h2>Search Contacts</h2>
+            <form method="GET" action="/">
+                <input type="text" name="search" placeholder="Search by name">
+                <input type="submit" value="Search">
+            </form>
             {% if contacts %}
                 <table border="1">
                     <tr>
                         <th>Name</th>
                         <th>Phone Number</th>
+                        <th>Edit</th>
                         <th>Delete</th>
                     </tr>
                     {% for contact in contacts %}
                         <tr>
                             <td>{{ contact['name'] }}</td>
                             <td>{{ contact['phone'] }}</td>
+                            <td>
+                                <form method="POST" action="/">
+                                    <input type="hidden" name="contact_id" value="{{ contact['id'] }}">
+                                    <input type="hidden" name="name" value="{{ contact['name'] }}">
+                                    <input type="hidden" name="phone" value="{{ contact['phone'] }}">
+                                    <input type="hidden" name="action" value="edit">
+                                    <input type="submit" value="Edit">
+                                </form>
+                            </td>
                             <td>
                                 <form method="POST" action="/">
                                     <input type="hidden" name="contact_id" value="{{ contact['id'] }}">
