@@ -1,11 +1,26 @@
-from flask import Flask, request, render_template_string, redirect, url_for
+from flask import Flask, request, render_template_string
 import sqlite3
 import os
+import unittest
 
 app = Flask(__name__)
 
+# Configuration
+class Config:
+    TESTING = False
+    DEBUG = False
+    DATABASE = '/nfs/demo.db'
+
+class DevelopmentConfig(Config):
+    DEBUG = True
+
+class TestingConfig(Config):
+    TESTING = True
+
+app.config.from_object(DevelopmentConfig)  # Change to TestingConfig for testing environment
+
 # Database file path
-DATABASE = '/nfs/demo.db'
+DATABASE = app.config['DATABASE']
 
 def get_db():
     db = sqlite3.connect(DATABASE)
@@ -106,11 +121,6 @@ def index():
                 <input type="submit" value="Submit">
             </form>
             <p>{{ message }}</p>
-            <h2>Search Contacts</h2>
-            <form method="GET" action="/">
-                <input type="text" name="search" placeholder="Search by name">
-                <input type="submit" value="Search">
-            </form>
             {% if contacts %}
                 <table border="1">
                     <tr>
@@ -148,6 +158,12 @@ def index():
         </body>
         </html>
     ''', message=message, contacts=contacts)
+
+# Static code testing
+@app.cli.command('test')
+def test():
+    tests = unittest.TestLoader().discover('tests')
+    unittest.TextTestRunner().run(tests)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
